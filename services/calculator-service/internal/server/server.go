@@ -100,7 +100,7 @@ func (h *handler) info(w http.ResponseWriter, _ *http.Request) {
 			{
 				Method:      http.MethodPost,
 				Path:        calculationsRoute,
-				Description: "Evaluate an arithmetic expression, e.g. {\"expression\": \"(12 + 3) * 4\"}.",
+				Description: "Evaluate an arithmetic expression using + - * / ^ %, sqrt() and parentheses, e.g. {\"expression\": \"(12 + 3) * 4\"}.",
 			},
 		},
 	})

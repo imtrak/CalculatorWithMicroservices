@@ -161,6 +161,7 @@ button:focus-visible {
 }
 
 .key-equals {
+  grid-column: span 2;
   color: var(--accent-text);
   background: var(--accent);
 }

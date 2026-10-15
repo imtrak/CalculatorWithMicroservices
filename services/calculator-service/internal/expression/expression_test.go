@@ -35,6 +35,51 @@ func TestEvaluateValid(t *testing.T) {
 		{"((((1))))", 1},
 		{"\t7 *\t6 ", 42},
 		{"123456789012345 + 0", 123456789012345},
+
+		// Power: right associative, stronger than * and /, weaker than %.
+		{"2^3", 8},
+		{"2^3^2", 512},
+		{"(2^3)^2", 64},
+		{"2^-1", 0.5},
+		{"2*3^2", 18},
+		{"2^2*3", 12},
+		{"10/2^2", 2.5},
+		{"-2^2", -4}, // unary minus is weaker than ^
+		{"(-2)^2", 4},
+		{"(-2)^3", -8},
+		{"2^0", 1},
+		{"0^0", 1},
+		{"0^2", 0},
+		{"2^0.5", 1.4142135623731},
+
+		// Square root.
+		{"sqrt(16)", 4},
+		{"sqrt(0)", 0},
+		{"sqrt(2+2)", 2},
+		{"sqrt(9) + sqrt(16)", 7},
+		{"sqrt(16)*2", 8},
+		{"sqrt(sqrt(16))", 2},
+		{"2*sqrt(9)^2", 18},
+		{"sqrt(2)", 1.4142135623731},
+		{"-sqrt(4)", -2},
+		{" sqrt( 25 ) ", 5},
+
+		// Percentage: postfix, divides by 100.
+		{"50%", 0.5},
+		{"200*50%", 100},
+		{"100 + 10%", 110}, // after + or -, % is a percent of the left operand
+		{"100 - 10%", 90},
+		{"100 * 10%", 10},
+		{"100 / 10%", 1000},
+		{"200 + 50% + 10%", 330}, // left operand is the running total
+		{"100 + (10%)", 100.1},   // parentheses make it a plain number
+		{"100 + 5*10%", 100.5},   // only a directly following % counts
+		{"100 + 10%%", 100.1},
+		{"10%%", 0.001},
+		{"(25+25)%", 0.5},
+		{"-50%", -0.5},
+		{"4^50%", 2}, // % binds tighter than ^
+		{"sqrt(1600%)", 4},
 	}
 
 	for _, tt := range tests {
@@ -80,6 +125,26 @@ func TestEvaluateErrors(t *testing.T) {
 		{"double operator", "1 + * 2", CodeInvalidSyntax},
 		{"missing closing", "(1 + 2", CodeUnmatchedParenthesis},
 		{"extra closing", "1 + 2)", CodeUnmatchedParenthesis},
+		{"uppercase function", "SQRT(4)", CodeInvalidCharacters},
+		{"unknown function", "cos(4)", CodeInvalidCharacters},
+		{"function glued to letters", "sqrtx(4)", CodeInvalidCharacters},
+		{"exponent notation", "1e5", CodeInvalidCharacters},
+		{"sqrt without parentheses", "sqrt 4", CodeInvalidSyntax},
+		{"sqrt alone", "sqrt", CodeInvalidSyntax},
+		{"sqrt empty", "sqrt()", CodeInvalidSyntax},
+		{"sqrt unclosed", "sqrt(4", CodeUnmatchedParenthesis},
+		{"implicit multiplication with sqrt", "2sqrt(4)", CodeInvalidSyntax},
+		{"missing exponent", "2^", CodeInvalidSyntax},
+		{"missing base", "^2", CodeInvalidSyntax},
+		{"lone percent", "%", CodeInvalidSyntax},
+		{"no modulo operator", "5%2", CodeInvalidSyntax},
+		{"negative square root", "sqrt(-1)", CodeNegativeSquareRoot},
+		{"computed negative square root", "sqrt(1-4)", CodeNegativeSquareRoot},
+		{"fractional power of a negative", "(-8)^0.5", CodeInvalidPower},
+		{"cube root of a negative", "(-8)^(1/3)", CodeInvalidPower},
+		{"zero to a negative power", "0^-1", CodeDivisionByZero},
+		{"power overflow", "10^400", CodeNonFiniteResult},
+		{"tower overflow", "99^99^99", CodeNonFiniteResult},
 		{"two dots", "1.2.3", CodeInvalidNumber},
 		{"double dot", "1..2", CodeInvalidNumber},
 		{"lone dot", ".", CodeInvalidNumber},
@@ -113,18 +178,5 @@ func TestEvaluateAcceptsMaximumNesting(t *testing.T) {
 	input := strings.Repeat("(", MaxDepth) + "1" + strings.Repeat(")", MaxDepth)
 	if got, err := Evaluate(input); err != nil || got != 1 {
 		t.Errorf("Evaluate(max nesting) = %v, %v; want 1, nil", got, err)
-	}
-}
-
-// Overflow cannot be reached through MaxLength-limited input, so check the
-// guard on the syntax tree directly.
-func TestBinaryEvalRejectsNonFiniteResults(t *testing.T) {
-	tree := binary{op: tokStar, left: number(1e200), right: number(1e200)}
-
-	_, err := tree.eval()
-
-	var exprErr *Error
-	if !errors.As(err, &exprErr) || exprErr.Code != CodeNonFiniteResult {
-		t.Errorf("eval error = %v, want code %q", err, CodeNonFiniteResult)
 	}
 }

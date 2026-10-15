@@ -39,6 +39,30 @@ describe('App', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ expression: '12+3' });
   });
 
+  it('builds power, percent and square-root expressions with the keypad', async () => {
+    fetchMock.mockResolvedValue(json({ expression: 'sqrt(16)', result: 4 }));
+    const user = userEvent.setup();
+    render(<App />);
+
+    await press(user, 'square root', '1', '6', 'close parenthesis');
+    expect(expression()).toHaveValue('sqrt(16)');
+    await press(user, 'equals');
+    expect(await screen.findByRole('status')).toHaveTextContent('= 4');
+
+    await press(user, 'clear', '2', 'power', '3', 'add', '5', '0', 'percent');
+    expect(expression()).toHaveValue('2^3+50%');
+  });
+
+  it('accepts the square-root sign typed into the field', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.type(expression(), '√(9)');
+
+    expect(expression()).toHaveValue('sqrt(9)');
+    expect(key('equals')).toBeEnabled();
+  });
+
   it('submits a typed expression with Enter', async () => {
     fetchMock.mockResolvedValue(json({ expression: '10/4', result: 2.5 }));
     const user = userEvent.setup();

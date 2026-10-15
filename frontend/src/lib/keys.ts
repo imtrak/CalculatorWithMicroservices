@@ -3,8 +3,11 @@ import { MAX_EXPRESSION_LENGTH } from './input';
 export const CLEAR = 'clear';
 export const BACKSPACE = 'backspace';
 export const EQUALS = 'equals';
+/** The square-root key inserts the function name and its opening parenthesis. */
+export const SQRT = 'sqrt(';
 
-const OPERATORS = new Set(['+', '-', '*', '/']);
+// Keys that continue from a result instead of starting a new expression.
+const OPERATORS = new Set(['+', '-', '*', '/', '^', '%']);
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
 export interface CalculatorState {
@@ -24,7 +27,9 @@ export function pressKey(state: CalculatorState, key: string): CalculatorState {
   if (key === CLEAR) return INITIAL_STATE;
 
   if (key === BACKSPACE) {
-    return { expression: state.expression.slice(0, -1), result: null };
+    // "sqrt(" went in with one key press, so it comes out with one too.
+    const length = state.expression.endsWith(SQRT) ? SQRT.length : 1;
+    return { expression: state.expression.slice(0, -length), result: null };
   }
 
   if (state.result !== null) {
@@ -34,6 +39,6 @@ export function pressKey(state: CalculatorState, key: string): CalculatorState {
     return { expression: state.result + key, result: null };
   }
 
-  if (state.expression.length >= MAX_EXPRESSION_LENGTH) return state;
+  if (state.expression.length + key.length > MAX_EXPRESSION_LENGTH) return state;
   return { expression: state.expression + key, result: null };
 }

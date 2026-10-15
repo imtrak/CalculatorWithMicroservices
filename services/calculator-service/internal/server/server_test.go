@@ -30,6 +30,9 @@ func TestCalculateSuccess(t *testing.T) {
 		{`{"expression":"(12 + 3) * 4"}`, `{"expression":"(12 + 3) * 4","result":60}`},
 		{`{"expression":"0.1 + 0.2"}`, `{"expression":"0.1 + 0.2","result":0.3}`},
 		{`{"expression":"10 / 4"}`, `{"expression":"10 / 4","result":2.5}`},
+		{`{"expression":"2^10"}`, `{"expression":"2^10","result":1024}`},
+		{`{"expression":"sqrt(144)"}`, `{"expression":"sqrt(144)","result":12}`},
+		{`{"expression":"50%"}`, `{"expression":"50%","result":0.5}`},
 	}
 	for _, tt := range tests {
 		rec := post(tt.body)
@@ -50,6 +53,8 @@ func TestCalculateErrors(t *testing.T) {
 		wantCode   string
 	}{
 		{"division by zero", `{"expression":"1/0"}`, 400, "division_by_zero"},
+		{"negative square root", `{"expression":"sqrt(-1)"}`, 400, "negative_square_root"},
+		{"invalid power", `{"expression":"(-8)^0.5"}`, 400, "invalid_power"},
 		{"unmatched parenthesis", `{"expression":"(1 + 2"}`, 400, "unmatched_parenthesis"},
 		{"invalid syntax", `{"expression":"1 + * 2"}`, 400, "invalid_syntax"},
 		{"invalid characters", `{"expression":"1; 2"}`, 400, "invalid_characters"},

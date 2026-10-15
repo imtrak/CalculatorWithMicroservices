@@ -13,6 +13,9 @@ const (
 	tokMinus
 	tokStar
 	tokSlash
+	tokCaret
+	tokPercent
+	tokSqrt
 	tokLParen
 	tokRParen
 )
@@ -49,6 +52,17 @@ func tokenize(input string) ([]token, error) {
 			}
 			tokens = append(tokens, token{kind: tokNumber, text: text, value: value, pos: start + 1})
 
+		case isLetter(c):
+			start := i
+			for i < len(input) && isLetter(input[i]) {
+				i++
+			}
+			word := input[start:i]
+			if word != "sqrt" {
+				return nil, newError(CodeInvalidCharacters, "Unknown word %q at position %d. The only supported function is sqrt.", word, start+1)
+			}
+			tokens = append(tokens, token{kind: tokSqrt, text: word, pos: start + 1})
+
 		default:
 			kind, ok := operatorKinds[c]
 			if !ok {
@@ -66,8 +80,11 @@ var operatorKinds = map[byte]tokenKind{
 	'-': tokMinus,
 	'*': tokStar,
 	'/': tokSlash,
+	'^': tokCaret,
+	'%': tokPercent,
 	'(': tokLParen,
 	')': tokRParen,
 }
 
-func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+func isDigit(c byte) bool  { return c >= '0' && c <= '9' }
+func isLetter(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }

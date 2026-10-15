@@ -14,7 +14,16 @@ browser ──> Ingress (Traefik) ──┬── /      ──> calculator-dash
 
 ## What it calculates
 
-Finite decimal numbers, parentheses, and the operators `+ - * /` with standard precedence (parentheses, then `*` and `/`, then `+` and `-`, left to right). Unary `+` and `-` are supported.
+Finite decimal numbers, parentheses, unary `+` and `-`, and these operations:
+
+| Operation | Syntax | Notes |
+|---|---|---|
+| Add, subtract, multiply, divide | `+ - * /` | `*` and `/` before `+` and `-`, left to right |
+| Power | `2^3` | right associative: `2^3^2` is `2^(3^2)` |
+| Square root | `sqrt(16)` | lowercase, always with parentheses |
+| Percentage | `50%` | postfix, "divide by 100"; after `+` or `-` it is a percent of the left operand |
+
+Precedence, from strongest to weakest: `%`, `^`, unary signs, `* /`, then `+ -`. Parentheses override all of it.
 
 | Example | Result |
 |---|---|
@@ -23,12 +32,19 @@ Finite decimal numbers, parentheses, and the operators `+ - * /` with standard p
 | `-(2 + 3) * 2` | `-10` |
 | `0.1 + 0.2` | `0.3` |
 | `.5 + 5.` | `5.5` |
+| `2^3^2` | `512` |
+| `-2^2` | `-4` |
+| `sqrt(16) + 2^3` | `12` |
+| `200 * 50%` | `100` |
+| `100 + 10%` | `110` |
 
 Limits: at most 256 characters and 64 levels of nesting. Whitespace means a space or a tab.
 
 Results are rounded to 15 significant digits so that binary floating-point noise does not leak out (`0.1 + 0.2` is `0.3`, not `0.30000000000000004`). Integers of up to 15 digits stay exact.
 
-Not implemented: exponentiation, square root and percentage (optional in the assignment). Adding one means changing the tokenizer, the parser and the tests, and the frontend's character check (`frontend/src/lib/input.ts`) must stay in sync with the backend's alphabet.
+`%` means "divide by 100", except right after `+` or `-`, where it is a percent of the left operand as on pocket calculators: `100 + 10%` is `110` and `100 - 10%` is `90`, while `100 * 10%` is `10` and `100 / 10%` is `1000`. There is no modulo operator (`5%2` is a syntax error) and no implicit multiplication (`2(3)` and `2sqrt(4)` are errors). See [ADR-0006](docs/adr/0006-power-square-root-and-percentage.md) for the reasoning.
+
+The grammar is defined in three places that must change together: the backend tokenizer and parser, the frontend's character check (`frontend/src/lib/input.ts`), and this documentation.
 
 ## Prerequisites
 
@@ -111,13 +127,15 @@ curl -X POST http://calculator.localhost:8088/api/v1/calculations \
 |---|---|---|
 | 400 | `empty_expression` | blank or missing expression |
 | 400 | `expression_too_long` | more than 256 characters |
-| 400 | `invalid_characters` | a character outside the allowed alphabet, e.g. `2 + abc` |
+| 400 | `invalid_characters` | a character or word outside the allowed alphabet, e.g. `2 + abc` or `cos(4)` |
 | 400 | `invalid_number` | malformed number, e.g. `1.2.3` or `.` |
-| 400 | `invalid_syntax` | e.g. `1 + * 2`, `2(3)`, `()` |
+| 400 | `invalid_syntax` | e.g. `1 + * 2`, `2(3)`, `()`, `sqrt 4`, `2^` |
 | 400 | `unmatched_parenthesis` | e.g. `(1 + 2` or `1 + 2)` |
 | 400 | `nesting_too_deep` | more than 64 levels of nesting |
-| 400 | `division_by_zero` | e.g. `1/0` or `1/(2-2)` |
-| 400 | `non_finite_result` | the result is too large to represent |
+| 400 | `division_by_zero` | e.g. `1/0`, `1/(2-2)` or `0^-1` |
+| 400 | `negative_square_root` | e.g. `sqrt(-1)` |
+| 400 | `invalid_power` | a negative base with a fractional exponent, e.g. `(-8)^0.5` |
+| 400 | `non_finite_result` | the result is too large to represent, e.g. `10^400` |
 | 400 | `invalid_request` | body is not a JSON object with a string `expression` field |
 | 413 | `request_too_large` | body over 4 KiB |
 | 415 | `unsupported_media_type` | `Content-Type` is not `application/json` |
@@ -154,9 +172,9 @@ Measured results:
 
 | Area | Tests | Coverage |
 |---|---|---|
-| Backend: `internal/expression` | table-driven: valid expressions, every error code, nesting and length limits | 95.7% of statements |
+| Backend: `internal/expression` | table-driven, 98 cases: every operation, precedence, every error code, nesting and length limits | 95.9% of statements |
 | Backend: `internal/server` | HTTP contract, validation, error shape, request ID, health, panic recovery | 94.3% of statements |
-| Frontend (all of `src`) | 47 tests: pure logic, API client, and the full UI against a mocked `fetch` | 98.9% statements, 95.5% branches, 100% lines |
+| Frontend (all of `src`) | 64 tests: pure logic, API client, and the full UI against a mocked `fetch` | 98.9% statements, 95.7% branches, 100% lines |
 
 `cmd/calculator-service/main.go` and `frontend/src/main.tsx` are start-up wiring and are not unit tested. The Kubernetes manifests and the images were verified by running them on a kind cluster, not by automated tests.
 
@@ -166,11 +184,12 @@ The reasoning is in `docs/adr/`:
 
 | ADR | Decision |
 |---|---|
-| [0001](docs/adr/0001-free-form-arithmetic-expressions.md) | One endpoint taking a free-form expression, parsed with an allowlisted grammar, instead of one endpoint per operation. |
+| [0001](docs/adr/0001-free-form-arithmetic-expressions.md) | One endpoint taking a free-form expression, parsed with an allowlisted grammar, instead of one endpoint per operation. Amended by 0006. |
 | [0002](docs/adr/0002-kubernetes-deployment.md) | Deploy on Kubernetes, with probes, resource limits and a local kind cluster. |
 | [0003](docs/adr/0003-api-gateway-and-calculator-service.md) | *Superseded.* An API gateway in front of a calculator service. |
 | [0004](docs/adr/0004-single-calculator-service.md) | A single backend service instead: the gateway only relayed requests and duplicated validation. |
 | [0005](docs/adr/0005-single-host-ingress-routing.md) | One host, routed by path (`/` and `/api`), so the browser sees one origin and no CORS is needed. |
+| [0006](docs/adr/0006-power-square-root-and-percentage.md) | Power, square root and percentage, and the conventions chosen for each. |
 
 Assumptions and trade-offs worth knowing:
 

@@ -1,13 +1,19 @@
 // Package expression tokenizes, parses and evaluates arithmetic expressions.
 //
 // The grammar is an allowlist: finite decimal numbers, parentheses, spaces and
-// tabs, the binary operators + - * /, and unary + and -. Input is never handed
-// to a language runtime, shell or database.
+// tabs, the binary operators + - * / ^, the postfix operator %, the function
+// sqrt, and unary + and -. Input is never handed to a language runtime, shell or
+// database.
 //
 //	expr    = term { ("+" | "-") term }
 //	term    = unary { ("*" | "/") unary }
-//	unary   = ("+" | "-") unary | primary
-//	primary = number | "(" expr ")"
+//	unary   = ("+" | "-") unary | power
+//	power   = postfix [ "^" unary ]
+//	postfix = primary { "%" }
+//	primary = number | "sqrt" "(" expr ")" | "(" expr ")"
+//
+// Precedence from strongest to weakest: %, ^ (right associative), unary signs,
+// * and /, then + and -. So -2^2 is -4, 2^3^2 is 512, and 50% is 0.5.
 package expression
 
 import (
@@ -33,6 +39,8 @@ const (
 	CodeUnmatchedParenthesis = "unmatched_parenthesis"
 	CodeNestingTooDeep       = "nesting_too_deep"
 	CodeDivisionByZero       = "division_by_zero"
+	CodeNegativeSquareRoot   = "negative_square_root"
+	CodeInvalidPower         = "invalid_power"
 	CodeNonFiniteResult      = "non_finite_result"
 )
 

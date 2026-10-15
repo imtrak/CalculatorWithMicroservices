@@ -1,4 +1,4 @@
-import { BACKSPACE, CLEAR, EQUALS } from '../lib/keys';
+import { BACKSPACE, CLEAR, EQUALS, SQRT } from '../lib/keys';
 
 type KeyKind = 'digit' | 'operator' | 'action' | 'equals';
 
@@ -16,22 +16,25 @@ const KEYS: readonly KeyDefinition[] = [
   { value: BACKSPACE, label: '⌫', name: 'backspace', kind: 'action' },
   { value: '(', label: '(', name: 'open parenthesis', kind: 'action' },
   { value: ')', label: ')', name: 'close parenthesis', kind: 'action' },
+  { value: SQRT, label: '√', name: 'square root', kind: 'operator' },
+  { value: '^', label: '^', name: 'power', kind: 'operator' },
+  { value: '%', label: '%', name: 'percent', kind: 'operator' },
+  { value: '/', label: '÷', name: 'divide', kind: 'operator' },
   { value: '7', label: '7', kind: 'digit' },
   { value: '8', label: '8', kind: 'digit' },
   { value: '9', label: '9', kind: 'digit' },
-  { value: '/', label: '÷', name: 'divide', kind: 'operator' },
+  { value: '*', label: '×', name: 'multiply', kind: 'operator' },
   { value: '4', label: '4', kind: 'digit' },
   { value: '5', label: '5', kind: 'digit' },
   { value: '6', label: '6', kind: 'digit' },
-  { value: '*', label: '×', name: 'multiply', kind: 'operator' },
+  { value: '-', label: '−', name: 'subtract', kind: 'operator' },
   { value: '1', label: '1', kind: 'digit' },
   { value: '2', label: '2', kind: 'digit' },
   { value: '3', label: '3', kind: 'digit' },
-  { value: '-', label: '−', name: 'subtract', kind: 'operator' },
+  { value: '+', label: '+', name: 'add', kind: 'operator' },
   { value: '0', label: '0', kind: 'digit' },
   { value: '.', label: '.', name: 'decimal point', kind: 'digit' },
   { value: EQUALS, label: '=', name: 'equals', kind: 'equals' },
-  { value: '+', label: '+', name: 'add', kind: 'operator' },
 ];
 
 interface KeypadProps {

@@ -1,6 +1,6 @@
 # ADR-0001: Free-form arithmetic expressions
 
-- Status: Accepted
+- Status: Accepted, amended by [ADR-0006](0006-power-square-root-and-percentage.md) (adds power, square root and percentage)
 - Date: 2026-10-15
 
 ## Context
