@@ -1,0 +1,18 @@
+# Local cluster for the calculator:
+#   kind create cluster --name calculator --config kubernetes/kind/cluster.yaml
+# The app is then reachable at http://calculator.localhost:8088
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      # Port 80 of the node (where the Ingress Controller listens) to the host.
+      - containerPort: 80
+        hostPort: 8088
+        protocol: TCP

@@ -1,0 +1,31 @@
+# One host, routed by path (ADR-0005). The browser sees a single origin, so the
+# frontend calls /api/... directly and no CORS configuration is needed. When
+# several rules match, the controller picks the longest path.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: calculator
+  namespace: calculator
+  labels:
+    app.kubernetes.io/name: calculator
+    app.kubernetes.io/part-of: calculator
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: calculator.localhost
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: calculator-service
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: calculator-dashboard
+                port:
+                  name: http

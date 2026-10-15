@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculator-dashboard
+  namespace: calculator
+  labels:
+    app.kubernetes.io/name: calculator-dashboard
+    app.kubernetes.io/part-of: calculator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: calculator-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: calculator-dashboard
+        app.kubernetes.io/part-of: calculator
+    spec:
+      containers:
+        - name: calculator-dashboard
+          image: calculator-dashboard:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+          volumeMounts:
+            # nginx keeps its pid file and temp files here; the root filesystem
+            # is read-only.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calculator-dashboard
+  namespace: calculator
+  labels:
+    app.kubernetes.io/name: calculator-dashboard
+    app.kubernetes.io/part-of: calculator
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: calculator-dashboard
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
